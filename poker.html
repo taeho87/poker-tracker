@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>포커 토너먼트 전적 & ROI 관리기</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #121418; color: #f0f2f5; min-height: 100vh; display: flex; justify-content: center; }
+    main { width: min(100%, 500px); padding: 20px 16px 40px; }
+
+    h1 { font-size: 22px; margin-bottom: 20px; text-align: center; color: #4e80ee; }
+
+    /* 대시보드 카드 */
+    .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+    .card { background: #1e222d; padding: 16px; border-radius: 12px; border: 1px solid #2a2e3d; }
+    .card-title { font-size: 13px; color: #8a91a0; margin-bottom: 6px; }
+    .card-value { font-size: 20px; font-weight: 700; }
+    .positive { color: #2cd07e; }
+    .negative { color: #ff5252; }
+
+    /* 입력 폼 */
+    .form-container { background: #1e222d; padding: 18px; border-radius: 12px; border: 1px solid #2a2e3d; margin-bottom: 24px; }
+    .form-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: #e1e4ea; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; color: #a0a6b5; margin-bottom: 4px; }
+    .form-group input { width: 100%; padding: 10px 12px; background: #121418; border: 1px solid #333848; border-radius: 8px; color: #fff; font-size: 15px; }
+    .form-row { display: flex; gap: 10px; }
+    .form-row .form-group { flex: 1; }
+
+    button.btn-submit { width: 100%; padding: 12px; background: #365ee8; border: 0; border-radius: 8px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+    button.btn-submit:active { background: #284ac4; }
+
+    /* 전적 리스트 */
+    .list-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .record-item { background: #1e222d; padding: 14px 16px; border-radius: 10px; border: 1px solid #2a2e3d; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .record-info .tourney-name { font-size: 15px; font-weight: 600; }
+    .record-info .tourney-meta { font-size: 12px; color: #7a8190; margin-top: 4px; }
+    .record-profit { text-align: right; }
+    .record-profit .amount { font-size: 16px; font-weight: 700; }
+    .record-profit .rank { font-size: 12px; color: #9aa0a6; margin-top: 2px; }
+    .btn-del { background: none; border: 0; color: #626978; font-size: 18px; margin-left: 12px; cursor: pointer; }
+    .btn-del:hover { color: #ff5252; }
+
+    .empty-msg { text-align: center; color: #626978; padding: 30px 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>♠️ Poker Tournament Tracker</h1>
+
+    <!-- 종합 대시보드 -->
+    <section class="dashboard">
+      <div class="card">
+        <div class="card-title">총 ROI</div>
+        <div class="card-value" id="total-roi">0%</div>
+      </div>
+      <div class="card">
+        <div class="card-title">순수익</div>
+        <div class="card-value" id="net-profit">0원</div>
+      </div>
+      <div class="card">
+        <div class="card-title">총 플레이 수 (ITM)</div>
+        <div class="card-value" id="itm-rate">0회 (0%)</div>
+      </div>
+      <div class="card">
+        <div class="card-title">총 바이인 금액</div>
+        <div class="card-value" id="total-buyin">0원</div>
+      </div>
+    </section>
+
+    <!-- 기록 입력 폼 -->
+    <section class="form-container">
+      <div class="form-title">새 토너먼트 기록하기</div>
+      <form id="poker-form">
+        <div class="form-group">
+          <label for="title">토너먼트 이름</label>
+          <input type="text" id="title" placeholder="예: 데일리 딥스택, WPT 메인" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="buyin">바이인 금액 (원)</label>
+            <input type="number" id="buyin" placeholder="0" min="0" step="1000" required>
+          </div>
+          <div class="form-group">
+            <label for="prize">획득 상금 (원)</label>
+            <input type="number" id="prize" placeholder="0" min="0" step="1000" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rank">최종 순위 (등)</label>
+            <input type="number" id="rank" placeholder="예: 1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="entries">총 참가자 수</label>
+            <input type="number" id="entries" placeholder="예: 120" min="1">
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">기록 저장</button>
+      </form>
+    </section>
+
+    <!-- 히스토리 목록 -->
+    <section>
+      <div class="list-title">
+        <span>최근 경기 내역</span>
+      </div>
+      <div id="record-list"></div>
+    </section>
+  </main>
+
+  <script>
+    let tourneys = JSON.parse(localStorage.getItem('poker_records')) || [];
+
+    const form = document.getElementById('poker-form');
+    const recordList = document.getElementById('record-list');
+
+    const totalRoiEl = document.getElementById('total-roi');
+    const netProfitEl = document.getElementById('net-profit');
+    const itmRateEl = document.getElementById('itm-rate');
+    const totalBuyinEl = document.getElementById('total-buyin');
+
+    const formatMoney = n => n.toLocaleString('ko-KR') + '원';
+
+    function updateStats() {
+      if (tourneys.length === 0) {
+        totalRoiEl.textContent = '0%';
+        totalRoiEl.className = 'card-value';
+        netProfitEl.textContent = '0원';
+        netProfitEl.className = 'card-value';
+        itmRateEl.textContent = '0회 (0%)';
+        totalBuyinEl.textContent = '0원';
+        return;
+      }
+
+      const totalBuyin = tourneys.reduce((sum, item) => sum + item.buyin, 0);
+      const totalPrize = tourneys.reduce((sum, item) => sum + item.prize, 0);
+      const netProfit = totalPrize - totalBuyin;
+      const roi = totalBuyin > 0 ? ((netProfit / totalBuyin) * 100).toFixed(1) : 0;
+      
+      const itmCount = tourneys.filter(item => item.prize > 0).length;
+      const itmRate = ((itmCount / tourneys.length) * 100).toFixed(1);
+
+      totalRoiEl.textContent = (roi > 0 ? '+' : '') + roi + '%';
+      totalRoiEl.className = 'card-value ' + (roi > 0 ? 'positive' : roi < 0 ? 'negative' : '');
+
+      netProfitEl.textContent = (netProfit > 0 ? '+' : '') + formatMoney(netProfit);
+      netProfitEl.className = 'card-value ' + (netProfit > 0 ? 'positive' : netProfit < 0 ? 'negative' : '');
+
+      itmRateEl.textContent = `${tourneys.length}회 (${itmRate}% ITM)`;
+      totalBuyinEl.textContent = formatMoney(totalBuyin);
+    }
+
+    function renderList() {
+      recordList.innerHTML = '';
+
+      if (tourneys.length === 0) {
+        recordList.innerHTML = '<div class="empty-msg">등록된 토너먼트 기록이 없습니다.</div>';
+        return;
+      }
+
+      tourneys.forEach((item, index) => {
+        const profit = item.prize - item.buyin;
+        const roi = item.buyin > 0 ? ((profit / item.buyin) * 100).toFixed(0) : 0;
+        
+        const row = document.createElement('div');
+        row.className = 'record-item';
+        
+        const rankText = item.rank ? `${item.rank}위${item.entries ? ' / ' + item.entries + '명' : ''}` : '';
+
+        row.innerHTML = `
+          <div class="record-info">
+            <div class="tourney-name">${item.title}</div>
+            <div class="tourney-meta">바이인: ${formatMoney(item.buyin)} · ROI: ${roi}%</div>
+          </div>
+          <div style="display:flex; align-items:center;">
+            <div class="record-profit">
+              <div class="amount ${profit > 0 ? 'positive' : profit < 0 ? 'negative' : ''}">
+                ${profit > 0 ? '+' : ''}${formatMoney(profit)}
+              </div>
+              <div class="rank">${rankText}</div>
+            </div>
+            <button class="btn-del" onclick="deleteRecord(${index})" title="삭제">✕</button>
+          </div>
+        `;
+
+        recordList.appendChild(row);
+      });
+    }
+
+    form.onsubmit = (e) => {
+      e.preventDefault();
+
+      const newRecord = {
+        title: document.getElementById('title').value,
+        buyin: Number(document.getElementById('buyin').value),
+        prize: Number(document.getElementById('prize').value),
+        rank: document.getElementById('rank').value ? Number(document.getElementById('rank').value) : null,
+        entries: document.getElementById('entries').value ? Number(document.getElementById('entries').value) : null,
+        date: new Date().toISOString()
+      };
+
+      tourneys.unshift(newRecord);
+      localStorage.setItem('poker_records', JSON.stringify(tourneys));
+
+      form.reset();
+      init();
+    };
+
+    function deleteRecord(index) {
+      if (confirm('이 기록을 삭제하시겠습니까?')) {
+        tourneys.splice(index, 1);
+        localStorage.setItem('poker_records', JSON.stringify(tourneys));
+        init();
+      }
+    }
+
+    function init() {
+      updateStats();
+      renderList();
+    }
+
+    init();
+  </script>
+</body>
+</html>
