@@ -1,0 +1,1 @@
+ALTER TABLE `tournaments` ADD `total_input` integer DEFAULT 0 NOT NULL;
